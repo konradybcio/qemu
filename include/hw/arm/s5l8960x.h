@@ -64,6 +64,7 @@ typedef struct
 
     unsigned long dram_size;
     AppleA7State *cpus[A7_MAX_CPU];
+    CPUClusterState cluster;
     SysBusDevice *aic;
     MemoryRegion *sysmem;
     struct mach_header_64 *kernel;

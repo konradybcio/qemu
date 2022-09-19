@@ -72,9 +72,8 @@
 #define S5L8960X_DRAM_BASE         (0x800000000)
 #define S5L8960X_DRAM_SIZE         (1 * GiB)
 
-/* This is from /chosen/memory-map MOST LIKELY WRONG */
-#define S5L8960X_KERNEL_REGION_BASE (0x803804000)
-#define S5L8960X_KERNEL_REGION_SIZE (0x1a1a230)
+#define S5L8960X_KERNEL_REGION_BASE (S5L8960X_DRAM_BASE + 6*1024*1024)
+#define S5L8960X_KERNEL_REGION_SIZE (0x3e200000)
 
 /* NOTE: starting from SPI1 */
 #define S5L8960X_SPI_BASE(_x)      (0x0a804000 + (_x) * APPLE_SPI_MMIO_SIZE)
@@ -91,7 +90,8 @@
 #define S5L8960X_ANS_DATA_BASE     (S5L8960X_ANS_TEXT_BASE + S5L8960X_ANS_TEXT_SIZE)
 #define S5L8960X_ANS_DATA_SIZE     (0x7b6000)
 
-#define S5L8960X_DISPLAY_BASE      (0x83ee00000)
+/* VRAM region follows right after the kernel */
+#define S5L8960X_DISPLAY_BASE      (S5L8960X_KERNEL_REGION_BASE + S5L8960X_KERNEL_REGION_SIZE)
 #define S5L8960X_DISPLAY_SIZE      (0x87b000)
 
 #define S5L8960X_PANIC_BASE        (0x83f67b000)
@@ -296,13 +296,14 @@ static void s5l8960x_load_classic_kc(S5L8960XMachineState *tms, const char *cmdl
 
     mem_size = S5L8960X_KERNEL_REGION_SIZE -
                (g_phys_base - S5L8960X_KERNEL_REGION_BASE);
+fprintf(stderr, "mem_size: 0x" TARGET_FMT_lx "(%luMiB)\n", mem_size, mem_size/(1024*1024));
 
     macho_load_dtb(tms->device_tree, nsas, sysmem, "DeviceTree", info);
 
     top_of_kernel_data_pa = (align_4k_high(phys_ptr) + 0x3000ull) & ~0x3fffull;
 
     fprintf(stderr, "cmdline: [%s]\n", cmdline);
-    macho_setup_bootargs("BootArgs", nsas, sysmem, info->bootargs_pa,
+    macho_setup_bootargs_ios12("BootArgs", nsas, sysmem, info->bootargs_pa,
                          g_virt_base, g_phys_base, mem_size,
                          top_of_kernel_data_pa, dtb_va, info->dtb_size,
                          tms->video, cmdline);
@@ -629,6 +630,10 @@ static void s5l8960x_cpu_setup(MachineState *machine)
     root = find_dtb_node(tms->device_tree, "cpus");
     assert(root);
 
+    object_initialize_child(OBJECT(machine), "cluster", &tms->cluster,
+                            TYPE_CPU_CLUSTER);
+    qdev_prop_set_uint32(DEVICE(&tms->cluster), "cluster-id", 0);
+
     for (iter = root->child_nodes, i = 0; iter != NULL; iter = next,i++) {
         DTBNode *node;
 
@@ -641,8 +646,13 @@ static void s5l8960x_cpu_setup(MachineState *machine)
 
         tms->cpus[i] = apple_a7_cpu_create(node);
 
+        object_property_add_child(OBJECT(&tms->cluster),
+                                  DEVICE(tms->cpus[i])->id,
+                                  OBJECT(tms->cpus[i]));
+
         qdev_realize(DEVICE(tms->cpus[i]), NULL, &error_fatal);
     }
+    qdev_realize(DEVICE(&tms->cluster), NULL, &error_fatal);
 }
 
 static void s5l8960x_create_aic(MachineState *machine)
@@ -1113,6 +1123,21 @@ static void s5l8960x_create_boot_display(MachineState *machine)
     sysbus_realize_and_unref(fb, &error_fatal);
 }
 
+static void s5l8960x_cpu_reset_work(CPUState *cpu, run_on_cpu_data data)
+{
+    S5L8960XMachineState *tms = data.host_ptr;
+    CPUARMState *env;
+    AppleA7State *tcpu = (AppleA7State *)object_dynamic_cast(OBJECT(cpu),
+                                                           TYPE_APPLE_A7);
+    if (!tcpu) {
+        return;
+    }
+    cpu_reset(cpu);
+    env = &ARM_CPU(cpu)->env;
+    env->xregs[0] = tms->bootinfo.bootargs_pa;
+    cpu_set_pc(cpu, tms->bootinfo.entry);
+}
+
 static void s5l8960x_cpu_reset(void *opaque)
 {
     MachineState *machine = MACHINE(opaque);
@@ -1126,7 +1151,11 @@ static void s5l8960x_cpu_reset(void *opaque)
             object_property_set_int(OBJECT(cpu), "rvbar",
                                     tms->bootinfo.entry & ~0xfff,
                                     &error_abort);
-            cpu_reset(cpu);
+            if (tcpu->cpu_id == 0) {
+                run_on_cpu(cpu, s5l8960x_cpu_reset_work, RUN_ON_CPU_HOST_PTR(tms));
+            } else {
+                run_on_cpu(cpu, (run_on_cpu_func)cpu_reset, RUN_ON_CPU_NULL);
+            }
         }
     }
 }

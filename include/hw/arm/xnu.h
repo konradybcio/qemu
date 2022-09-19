@@ -32,6 +32,7 @@
 // pexpert/pexpert/arm64/boot.h
 #define xnu_arm64_kBootArgsRevision2 2 /* added boot_args.bootFlags */
 #define xnu_arm64_kBootArgsVersion2 2
+#define xnu_arm64_BOOT_LINE_LENGTH_iOS12 256
 #define xnu_arm64_BOOT_LINE_LENGTH 608
 
 
@@ -181,6 +182,22 @@ typedef struct xnu_arm64_monitor_boot_args {
     uint64_t    kernPhysSlide;   /* offset from kernPhysBase to kernel load address */
     uint64_t    kernVirtSlide;   /* virtual slide applied to kernel at load time */
 } monitor_boot_args;
+
+struct xnu_arm64_boot_args_ios12 {
+    uint16_t           Revision;                                   /* Revision of boot_args structure */
+    uint16_t           Version;                                    /* Version of boot_args structure */
+    uint64_t           virtBase;                                   /* Virtual base of memory */
+    uint64_t           physBase;                                   /* Physical base of memory */
+    uint64_t           memSize;                                    /* Size of memory */
+    uint64_t           topOfKernelData;                            /* Highest physical address used in kernel data area */
+    video_boot_args    Video;                                      /* Video Information */
+    uint32_t           machineType;                                /* Machine Type */
+    uint64_t           deviceTreeP;                                /* Base of flattened device tree */
+    uint32_t           deviceTreeLength;                           /* Length of flattened tree */
+    char               CommandLine[xnu_arm64_BOOT_LINE_LENGTH_iOS12];    /* Passed in command line */
+    uint64_t           bootFlags;                                  /* Additional flags specified by the bootloader */
+    uint64_t           memSizeActual;                              /* Actual size of memory */
+};
 
 struct xnu_arm64_boot_args {
     uint16_t           Revision;                                   /* Revision of boot_args structure */

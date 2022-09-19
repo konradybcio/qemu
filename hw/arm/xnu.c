@@ -692,6 +692,43 @@ void macho_setup_bootargs(const char *name, AddressSpace *as,
                       &boot_args);
 }
 
+void macho_setup_bootargs_ios12(const char *name, AddressSpace *as,
+                          MemoryRegion *mem, hwaddr bootargs_pa,
+                          hwaddr virt_base, hwaddr phys_base, hwaddr mem_size,
+                          hwaddr top_of_kernel_data_pa, hwaddr dtb_va,
+                          hwaddr dtb_size, video_boot_args v_bootargs,
+                          const char *cmdline)
+{
+    struct xnu_arm64_boot_args_ios12 boot_args;
+
+    memset(&boot_args, 0, sizeof(boot_args));
+    boot_args.Revision = xnu_arm64_kBootArgsRevision2;
+    boot_args.Version = xnu_arm64_kBootArgsVersion2;
+    boot_args.virtBase = virt_base;
+    boot_args.physBase = phys_base;
+    boot_args.memSize = mem_size;
+
+    boot_args.Video.v_baseAddr = v_bootargs.v_baseAddr;
+    boot_args.Video.v_depth = v_bootargs.v_depth;
+    boot_args.Video.v_display = v_bootargs.v_display;
+    boot_args.Video.v_height = v_bootargs.v_height;
+    boot_args.Video.v_rowBytes = v_bootargs.v_rowBytes;
+    boot_args.Video.v_width = v_bootargs.v_width;
+
+    boot_args.topOfKernelData = top_of_kernel_data_pa;
+    boot_args.deviceTreeP = dtb_va;
+    boot_args.deviceTreeLength = dtb_size;
+    boot_args.memSizeActual = 0;
+    boot_args.bootFlags = 1;
+    if (cmdline) {
+        g_strlcpy(boot_args.CommandLine, cmdline,
+                  sizeof(boot_args.CommandLine));
+    }
+
+    allocate_and_copy(mem, as, name, bootargs_pa, sizeof(boot_args),
+                      &boot_args);
+}
+
 void macho_highest_lowest(struct mach_header_64 *mh, uint64_t *lowaddr,
                           uint64_t *highaddr)
 {
