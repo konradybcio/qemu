@@ -1329,7 +1329,7 @@ static uint64_t usb_dwc3_read(void *ptr, hwaddr addr, unsigned size)
         val = usb_dwc3_depcmdreg_read(ptr, addr, (addr - DEPCMD_REGS_START) >> 2);
         break;
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: addr: 0x%llx\n", __func__, addr);
+        qemu_log_mask(LOG_UNIMP, "%s: addr: 0x%lx\n", __func__, addr);
         //g_assert_not_reached();
         break;
     };
@@ -1351,7 +1351,7 @@ static void usb_dwc3_write(void *ptr, hwaddr addr, uint64_t val, unsigned size)
         usb_dwc3_depcmdreg_write(ptr, addr, (addr - DEPCMD_REGS_START) >> 2, val);
         break;
     default:
-        qemu_log_mask(LOG_UNIMP, "%s: addr: 0x%llx val: 0x%llx\n", __func__, addr, val);
+        qemu_log_mask(LOG_UNIMP, "%s: addr: 0x%lx val: 0x%lx\n", __func__, addr, val);
         //g_assert_not_reached();
         break;
     };

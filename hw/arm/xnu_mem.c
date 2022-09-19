@@ -69,6 +69,11 @@ uint8_t get_highest_different_bit_index(hwaddr addr1, hwaddr addr2)
     return 64 - __builtin_clzll(addr1 ^ addr2);
 }
 
+hwaddr align_4k_high(hwaddr addr)
+{
+    return align_up(addr, 0x1000);
+}
+
 hwaddr align_16k_low(hwaddr addr)
 {
     return addr & ~0x3fffull;

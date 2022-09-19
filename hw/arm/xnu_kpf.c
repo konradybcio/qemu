@@ -455,7 +455,7 @@ void kpf(void)
 
     kpf_amfi_patch(xnu_ppl_text_patchset);
     kpf_trustcache_patch(xnu_ppl_text_patchset);
-    xnu_pf_apply(ppltext_exec_range, xnu_ppl_text_patchset);
+    //xnu_pf_apply(ppltext_exec_range, xnu_ppl_text_patchset);
     xnu_pf_patchset_destroy(xnu_ppl_text_patchset);
 
     aks_patchset = xnu_pf_patchset_create(XNU_PF_ACCESS_32BIT);

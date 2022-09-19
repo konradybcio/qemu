@@ -35,6 +35,7 @@ hwaddr vtop_static(hwaddr va);
 hwaddr ptov_static(hwaddr pa);
 hwaddr vtop_mmu(hwaddr va, CPUState *cs);
 
+hwaddr align_4k_high(hwaddr addr);
 hwaddr align_16k_low(hwaddr addr);
 hwaddr align_16k_high(hwaddr addr);
 hwaddr align_up(hwaddr addr, hwaddr alignment);

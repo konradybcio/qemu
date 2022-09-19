@@ -534,11 +534,15 @@ AppleDARTState *apple_dart_create(DTBNode *node)
     DTBProp *prop;
     uint64_t *reg;
     uint32_t *instance;
+    bool is_legacy;
     int i;
 
     dev = qdev_new(TYPE_APPLE_DART);
     s = APPLE_DART(dev);
     sbd = SYS_BUS_DEVICE(dev);
+
+    prop = find_dtb_prop(node, "compatible");
+    is_legacy = !strcmp((char *)prop->value, "dart,s5l8960x");
 
     prop = find_dtb_prop(node, "name");
     g_strlcpy(s->name, (char *)prop->value, sizeof(s->name));
@@ -582,10 +586,14 @@ AppleDARTState *apple_dart_create(DTBNode *node)
         s->bypass_address = *(uint64_t *)prop->value;
     }
 
-    prop = find_dtb_prop(node, "instance");
-    assert(prop);
-    assert((prop->length / 12) * 12 == prop->length);
-    instance = (uint32_t *)prop->value;
+    if (is_legacy) {
+       instance = (uint32_t *)&"FOOBARR";
+    } else {
+       prop = find_dtb_prop(node, "instance");
+       assert(prop);
+       assert((prop->length / 12) * 12 == prop->length);
+       instance = (uint32_t *)prop->value;
+    }
 
     prop = find_dtb_prop(node, "reg");
     assert(prop);
